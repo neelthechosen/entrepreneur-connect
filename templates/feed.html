@@ -2,30 +2,55 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
+    <div class="col-lg-8">
+        <!-- Create Post Card -->
+        <div class="card business-card mb-4">
+            <div class="card-body d-flex align-items-center">
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" 
+                     class="rounded-circle me-3" width="50" height="50" style="object-fit: cover;">
+                <a href="{{ url_for('create_post') }}" class="btn btn-light flex-grow-1 text-start text-muted">
+                    Share your business idea or update...
+                </a>
+            </div>
+        </div>
+        
         {% if posts %}
             {% for post_data in posts %}
             {% set post = post_data.post %}
             {% set author = post_data.author %}
-            <div class="card mb-4">
+            <div class="card post-card">
                 <!-- Post header -->
                 <div class="post-header">
                     <img src="{{ url_for('static', filename='uploads/' + author.profile_picture) }}" 
                          class="post-user-img" alt="{{ author.name }}">
-                    <a href="{{ url_for('profile', username=author.username) }}" class="post-username">
-                        {{ author.username }}
-                    </a>
-                    <span class="post-time">{{ post.created_at.strftime('%b %d') }}</span>
+                    <div class="d-flex flex-column">
+                        <a href="{{ url_for('profile', username=author.username) }}" class="post-username">
+                            {{ author.username }}
+                        </a>
+                        <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    <span class="post-time">{{ post.created_at.strftime('%I:%M %p') }}</span>
+                </div>
+                
+                <!-- Post content -->
+                <div class="post-content">
+                    {{ post.content }}
                 </div>
                 
                 <!-- Post image -->
                 {% if post.image %}
                 <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="post-image" alt="Post image">
-                {% else %}
-                <div class="post-image bg-light d-flex align-items-center justify-content-center">
-                    <i class="bi bi-file-text display-4 text-muted"></i>
-                </div>
                 {% endif %}
+                
+                <!-- Post stats -->
+                <div class="d-flex justify-content-between px-4 py-2">
+                    <div>
+                        <span class="like-count me-3" data-post-id="{{ post.id }}">{{ post.likes|length }}</span> likes
+                    </div>
+                    <div>
+                        <span>{{ post.comments|length }}</span> comments
+                    </div>
+                </div>
                 
                 <!-- Post actions -->
                 <div class="post-actions">
@@ -36,39 +61,13 @@
                     <button class="post-action-btn comment-btn" data-bs-toggle="modal" data-bs-target="#commentModal{{ post.id }}">
                         <i class="bi bi-chat"></i>
                     </button>
-                    <button class="post-action-btn share-btn" data-bs-toggle="modal" data-bs-target="#shareModal{{ post.id }}">
-                        <i class="bi bi-send"></i>
+                    <button class="post-action-btn share-btn" onclick="copyPostLink({{ post.id }})">
+                        <i class="bi bi-share"></i>
                     </button>
                     <button class="post-action-btn ms-auto bookmark-btn">
                         <i class="bi bi-bookmark"></i>
                     </button>
                 </div>
-                
-                <!-- Post likes -->
-                <div class="post-likes">
-                    <span class="like-count">{{ post.likes|length }}</span> likes
-                </div>
-                
-                <!-- Post caption -->
-                <div class="post-caption">
-                    <span class="post-caption-username">{{ author.username }}</span>
-                    {{ post.content }}
-                </div>
-                
-                <!-- View all comments -->
-                {% if post.comments|length > 2 %}
-                <div class="post-comments">
-                    <a href="{{ url_for('post_detail', post_id=post.id) }}">View all {{ post.comments|length }} comments</a>
-                </div>
-                {% endif %}
-                
-                <!-- Recent comments -->
-                {% for comment in post.comments[-2:] %}
-                <div class="post-caption">
-                    <span class="post-caption-username">{{ comment.author.username }}</span>
-                    {{ comment.content }}
-                </div>
-                {% endfor %}
                 
                 <!-- Add comment -->
                 <div class="post-add-comment">
@@ -106,55 +105,7 @@
                             <div class="w-100 d-flex">
                                 <input type="text" class="form-control me-2" placeholder="Add a comment..." 
                                        id="modalCommentInput{{ post.id }}">
-                                <button class="btn btn-primary" onclick="addComment({{ post.id }})">Post</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Share Modal -->
-            <div class="modal fade" id="shareModal{{ post.id }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Share Post</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="share-options">
-                                <div class="share-option" onclick="copyPostLink({{ post.id }})">
-                                    <i class="bi bi-link-45deg text-primary"></i>
-                                    <span>Copy Link</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-envelope text-primary"></i>
-                                    <span>Email</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-whatsapp text-success"></i>
-                                    <span>WhatsApp</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-facebook text-primary"></i>
-                                    <span>Facebook</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-twitter text-info"></i>
-                                    <span>Twitter</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-linkedin text-primary"></i>
-                                    <span>LinkedIn</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-messenger text-primary"></i>
-                                    <span>Messenger</span>
-                                </div>
-                                <div class="share-option">
-                                    <i class="bi bi-reddit text-warning"></i>
-                                    <span>Reddit</span>
-                                </div>
+                                <button class="btn btn-primary" onclick="addComment({{ post.id }}, document.getElementById('modalCommentInput{{ post.id }}'))">Post</button>
                             </div>
                         </div>
                     </div>
@@ -164,8 +115,8 @@
         {% else %}
             <div class="text-center py-5">
                 <div class="empty-state">
-                    <i class="bi bi-journal-text display-4 text-muted mb-3"></i>
-                    <h4 class="text-muted">No posts yet</h4>
+                    <i class="bi bi-people display-4 text-muted mb-3"></i>
+                    <h4 class="text-muted">Welcome to Entrepreneur Connect</h4>
                     <p class="text-muted">Follow other entrepreneurs to see their posts here</p>
                     <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
                         <i class="bi bi-search"></i> Discover Entrepreneurs
@@ -189,74 +140,6 @@
 
 {% block scripts %}
 <script>
-    // Like functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle like button clicks
-        document.querySelectorAll('.like-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const postId = this.dataset.postId;
-                const icon = this.querySelector('i');
-                
-                fetch(`/like/${postId}`, { 
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    const likeCount = document.querySelector(`.post-likes .like-count[data-post-id="${postId}"]`) || 
-                                     document.querySelector(`.post-likes .like-count`);
-                    
-                    if (data.liked) {
-                        icon.classList.remove('bi-heart');
-                        icon.classList.add('bi-heart-fill');
-                        this.classList.add('active');
-                        icon.classList.add('like-animation');
-                        setTimeout(() => icon.classList.remove('like-animation'), 500);
-                    } else {
-                        icon.classList.remove('bi-heart-fill');
-                        icon.classList.add('bi-heart');
-                        this.classList.remove('active');
-                    }
-                    
-                    if (likeCount) {
-                        likeCount.textContent = data.likes_count;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            });
-        });
-        
-        // Handle comment input
-        document.querySelectorAll('.comment-input').forEach(input => {
-            input.addEventListener('input', function() {
-                const postId = this.dataset.postId;
-                const submitButton = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
-                submitButton.disabled = this.value.trim() === '';
-                submitButton.classList.toggle('active', this.value.trim() !== '');
-            });
-            
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && this.value.trim() !== '') {
-                    const postId = this.dataset.postId;
-                    addComment(postId, this);
-                }
-            });
-        });
-        
-        // Handle comment submit buttons
-        document.querySelectorAll('.comment-submit').forEach(button => {
-            button.addEventListener('click', function() {
-                const postId = this.dataset.postId;
-                const input = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
-                addComment(postId, input);
-            });
-        });
-    });
-    
     function addComment(postId, inputElement) {
         const content = inputElement.value.trim();
         if (!content) return;
@@ -272,9 +155,9 @@
         .then(data => {
             if (data.success) {
                 inputElement.value = '';
-                const submitButton = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
-                submitButton.disabled = true;
-                submitButton.classList.remove('active');
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById(`commentModal${postId}`));
+                modal.hide();
                 
                 // Reload the page to show the new comment
                 location.reload();
@@ -282,18 +165,6 @@
         })
         .catch(error => {
             console.error('Error:', error);
-        });
-    }
-    
-    function copyPostLink(postId) {
-        const postUrl = `${window.location.origin}/post/${postId}`;
-        navigator.clipboard.writeText(postUrl).then(() => {
-            // Show toast notification
-            const toast = new bootstrap.Toast(document.getElementById('shareToast'));
-            document.getElementById('toastMessage').textContent = 'Post link copied to clipboard!';
-            toast.show();
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
         });
     }
 </script>
