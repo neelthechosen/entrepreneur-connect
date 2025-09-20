@@ -1,1 +1,139 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <!-- Post -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="{{ url_for('static', filename='uploads/' + post.author.profile_picture) }}" 
+                         class="rounded-circle me-2" width="40" height="40">
+                    <div>
+                        <h5 class="card-title mb-0">{{ post.author.name }}</h5>
+                        <small class="text-muted">@{{ post.author.username }} · {{ post.created_at.strftime('%B %d, %Y at %H:%M') }}</small>
+                    </div>
+                </div>
+                <p class="card-text">{{ post.content }}</p>
+                
+                {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded mb-3" alt="Post image">
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-primary like-btn" data-post-id="{{ post.id }}">
+                        <i class="bi {% if current_user.id in post.likes|map(attribute='user_id')|list %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                        <span class="like-count">{{ post.likes|length }}</span> Likes
+                    </button>
+                    <span class="text-muted">
+                        <i class="bi bi-chat"></i> {{ post.comments|length }} Comments
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comment Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Add a comment</h5>
+                <form class="comment-form" data-post-id="{{ post.id }}">
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="Write your comment..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Post Comment</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Comments -->
+        <h5 class="mb-3">Comments ({{ post.comments|length }})</h5>
+        
+        <div class="comments-list" data-post-id="{{ post.id }}">
+            {% for comment in post.comments %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_picture) }}" 
+                             class="rounded-circle me-2" width="30" height="30">
+                        <strong>{{ comment.author.name }}</strong>
+                        <small class="text-muted ms-2">{{ comment.created_at.strftime('%B %d, %Y at %H:%M') }}</small>
+                    </div>
+                    <p class="mb-0">{{ comment.content }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <p>No comments yet. Be the first to comment!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Like functionality
+    document.querySelector('.like-btn').addEventListener('click', function() {
+        const postId = this.dataset.postId;
+        
+        fetch(`/like/${postId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                const icon = this.querySelector('i');
+                const countSpan = this.querySelector('.like-count');
+                
+                if (data.liked) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                } else {
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                }
+                
+                countSpan.textContent = data.likes_count;
+            });
+    });
+    
+    // Comment functionality
+    document.querySelector('.comment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const postId = this.dataset.postId;
+        
+        fetch(`/comment/${postId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add the new comment to the list
+                const commentsList = document.querySelector('.comments-list');
+                const commentElement = document.createElement('div');
+                commentElement.className = 'card mb-3';
+                commentElement.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="${data.comment.profile_picture}" class="rounded-circle me-2" width="30" height="30">
+                            <strong>${data.comment.author_name}</strong>
+                            <small class="text-muted ms-2">${data.comment.created_at}</small>
+                        </div>
+                        <p class="mb-0">${data.comment.content}</p>
+                    </div>
+                `;
+                commentsList.prepend(commentElement);
+                
+                // Clear the form
+                this.reset();
+                
+                // Update comment count
+                const commentCount = document.querySelector('h5');
+                const currentCount = parseInt(commentCount.textContent.match(/\d+/)[0]);
+                commentCount.textContent = `Comments (${currentCount + 1})`;
+            }
+        });
+    });
+</script>
+{% endblock %}
