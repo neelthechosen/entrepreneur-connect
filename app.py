@@ -7,20 +7,22 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db').replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Ensure upload directory exists
-try:
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-except OSError as e:
-    if e.errno != 17:  # Error number 17 is "File exists"
-        raise  # Re-raise if it's a different error
-    # If directory already exists, we can continue safely
-    pass
+# Ensure upload directory exists - robust version
+upload_folder = app.config['UPLOAD_FOLDER']
+
+# Check if path exists and is a file (not a directory)
+if os.path.exists(upload_folder) and not os.path.isdir(upload_folder):
+    # Remove the file if it exists
+    os.remove(upload_folder)
+    
+# Create the directory (will not error if it already exists)
+os.makedirs(upload_folder, exist_ok=True)
 
 # Initialize extensions
 db.init_app(app)
@@ -31,6 +33,10 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# Create database tables
+with app.app_context():
+    db.create_all()
 
 # Helper function for allowed files
 def allowed_file(filename):
@@ -281,6 +287,4 @@ def api_posts():
     })
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
