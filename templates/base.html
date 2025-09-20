@@ -11,7 +11,9 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('feed') }}">Entrepreneur Connect</a>
+            <a class="navbar-brand" href="{{ url_for('feed') }}">
+                <i class="bi bi-people-fill me-2"></i>Entrepreneur Connect
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -19,28 +21,40 @@
                 <ul class="navbar-nav me-auto">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('feed') }}">Home</a>
+                        <a class="nav-link" href="{{ url_for('feed') }}">
+                            <i class="bi bi-house-door me-1"></i>Home
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('create_post') }}">Create Post</a>
+                        <a class="nav-link" href="{{ url_for('create_post') }}">
+                            <i class="bi bi-plus-circle me-1"></i>Create Post
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
+                        <a class="nav-link" href="{{ url_for('search') }}">
+                            <i class="bi bi-search me-1"></i>Search
+                        </a>
                     </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" class="rounded-circle me-1" width="30" height="30">
-                            {{ current_user.name }}
+                            <span class="d-none d-md-inline">{{ current_user.name }}</span>
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('profile', username=current_user.username) }}">Profile</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('edit_profile') }}">Edit Profile</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('profile', username=current_user.username) }}">
+                                <i class="bi bi-person me-2"></i>Profile
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('edit_profile') }}">
+                                <i class="bi bi-pencil me-2"></i>Edit Profile
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="bi bi-box-arrow-right me-2"></i>Logout
+                            </a></li>
                         </ul>
                     </li>
                     {% else %}
@@ -71,7 +85,14 @@
         {% block content %}{% endblock %}
     </div>
 
+    <footer class="bg-light text-center text-muted py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">© 2025 Entrepreneur Connect. All rights reserved.</p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
