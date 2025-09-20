@@ -116,9 +116,19 @@ def logout():
 @app.route('/feed')
 @login_required
 def feed():
-    page = request.args.get('page', 1, type=int)
-    posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10)
-    return render_template('feed.html', posts=posts)
+    # Get all posts with their authors, ordered by creation date (newest first)
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    
+    # For each post, get the author information
+    posts_with_authors = []
+    for post in posts:
+        author = User.query.get(post.user_id)
+        posts_with_authors.append({
+            'post': post,
+            'author': author
+        })
+    
+    return render_template('feed.html', posts=posts_with_authors)
 
 @app.route('/create_post', methods=['GET', 'POST'])
 @login_required
@@ -191,7 +201,8 @@ def edit_profile():
 @login_required
 def post_detail(post_id):
     post = Post.query.get_or_404(post_id)
-    return render_template('post_detail.html', post=post)
+    author = User.query.get(post.user_id)
+    return render_template('post_detail.html', post=post, author=author)
 
 @app.route('/like/<int:post_id>', methods=['POST'])
 @login_required
@@ -203,13 +214,18 @@ def like_post(post_id):
     
     if existing_like:
         db.session.delete(existing_like)
-        db.session.commit()
-        return jsonify({'liked': False, 'likes_count': post.likes.count()})
+        liked = False
     else:
         new_like = Like(user_id=current_user.id, post_id=post_id)
         db.session.add(new_like)
-        db.session.commit()
-        return jsonify({'liked': True, 'likes_count': post.likes.count()})
+        liked = True
+    
+    db.session.commit()
+    
+    # Return the updated like count
+    like_count = Like.query.filter_by(post_id=post_id).count()
+    
+    return jsonify({'liked': liked, 'likes_count': like_count})
 
 @app.route('/comment/<int:post_id>', methods=['POST'])
 @login_required
@@ -252,39 +268,6 @@ def search():
     ).all()
     
     return render_template('search.html', users=users, query=query)
-
-# API endpoints for AJAX interactions
-@app.route('/api/posts')
-@login_required
-def api_posts():
-    page = request.args.get('page', 1, type=int)
-    posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10)
-    
-    posts_data = []
-    for post in posts.items:
-        posts_data.append({
-            'id': post.id,
-            'content': post.content,
-            'image': post.image,
-            'created_at': post.created_at.strftime('%B %d, %Y at %H:%M'),
-            'author': {
-                'id': post.author.id,
-                'name': post.author.name,
-                'username': post.author.username,
-                'profile_picture': url_for('static', filename=f'uploads/{post.author.profile_picture}')
-            },
-            'likes_count': len(post.likes),
-            'comments_count': len(post.comments),
-            'user_has_liked': any(like.user_id == current_user.id for like in post.likes)
-        })
-    
-    return jsonify({
-        'posts': posts_data,
-        'has_next': posts.has_next,
-        'has_prev': posts.has_prev,
-        'next_page': posts.next_num if posts.has_next else None,
-        'prev_page': posts.prev_num if posts.has_prev else None
-    })
 
 if __name__ == '__main__':
     app.run(debug=True)
