@@ -1,1 +1,10 @@
-
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+instance/
+*.sqlite
+static/uploads/*
+!static/uploads/.gitkeep
+.DS_Store
