@@ -119,13 +119,16 @@ def feed():
     # Get all posts with their authors, ordered by creation date (newest first)
     posts = Post.query.order_by(Post.created_at.desc()).all()
     
-    # For each post, get the author information
+    # For each post, get the author information and check if current user has liked it
     posts_with_authors = []
     for post in posts:
         author = User.query.get(post.user_id)
+        user_has_liked = Like.query.filter_by(user_id=current_user.id, post_id=post.id).first() is not None
+        
         posts_with_authors.append({
             'post': post,
-            'author': author
+            'author': author,
+            'user_has_liked': user_has_liked
         })
     
     return render_template('feed.html', posts=posts_with_authors)
@@ -165,7 +168,17 @@ def create_post():
 def profile(username):
     user = User.query.filter_by(username=username).first_or_404()
     posts = Post.query.filter_by(user_id=user.id).order_by(Post.created_at.desc()).all()
-    return render_template('profile.html', user=user, posts=posts)
+    
+    # Check if current user has liked each post
+    posts_with_likes = []
+    for post in posts:
+        user_has_liked = Like.query.filter_by(user_id=current_user.id, post_id=post.id).first() is not None
+        posts_with_likes.append({
+            'post': post,
+            'user_has_liked': user_has_liked
+        })
+    
+    return render_template('profile.html', user=user, posts=posts_with_likes)
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -202,7 +215,9 @@ def edit_profile():
 def post_detail(post_id):
     post = Post.query.get_or_404(post_id)
     author = User.query.get(post.user_id)
-    return render_template('post_detail.html', post=post, author=author)
+    user_has_liked = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first() is not None
+    
+    return render_template('post_detail.html', post=post, author=author, user_has_liked=user_has_liked)
 
 @app.route('/like/<int:post_id>', methods=['POST'])
 @login_required
