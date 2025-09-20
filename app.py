@@ -14,7 +14,13 @@ app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Ensure upload directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except OSError as e:
+    if e.errno != 17:  # Error number 17 is "File exists"
+        raise  # Re-raise if it's a different error
+    # If directory already exists, we can continue safely
+    pass
 
 # Initialize extensions
 db.init_app(app)
