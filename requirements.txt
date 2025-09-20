@@ -1,8 +1,9 @@
 Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
 Flask-Login==0.6.2
+Flask-Migrate==4.0.5  # Add this
 Werkzeug==2.3.7
 psycopg2-binary==2.9.7
 gunicorn==21.2.0
 python-dotenv==1.0.0
-Pillow==10.4.0  # Latest version with Python 3.13 support
+Pillow==10.4.0
