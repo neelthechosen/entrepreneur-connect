@@ -3,60 +3,160 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0">Latest Posts</h2>
-            <a href="{{ url_for('create_post') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Post
-            </a>
-        </div>
-        
         {% if posts %}
             {% for post_data in posts %}
             {% set post = post_data.post %}
             {% set author = post_data.author %}
-            <div class="card mb-4 shadow-sm post-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="{{ url_for('static', filename='uploads/' + author.profile_picture) }}" 
-                             class="rounded-circle me-3" width="48" height="48" alt="{{ author.name }}">
-                        <div class="flex-grow-1">
-                            <h5 class="card-title mb-0">{{ author.name }}</h5>
-                            <small class="text-muted">@{{ author.username }} · {{ post.created_at.strftime('%b %d, %Y') }}</small>
+            <div class="card mb-4">
+                <!-- Post header -->
+                <div class="post-header">
+                    <img src="{{ url_for('static', filename='uploads/' + author.profile_picture) }}" 
+                         class="post-user-img" alt="{{ author.name }}">
+                    <a href="{{ url_for('profile', username=author.username) }}" class="post-username">
+                        {{ author.username }}
+                    </a>
+                    <span class="post-time">{{ post.created_at.strftime('%b %d') }}</span>
+                </div>
+                
+                <!-- Post image -->
+                {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="post-image" alt="Post image">
+                {% else %}
+                <div class="post-image bg-light d-flex align-items-center justify-content-center">
+                    <i class="bi bi-file-text display-4 text-muted"></i>
+                </div>
+                {% endif %}
+                
+                <!-- Post actions -->
+                <div class="post-actions">
+                    <button class="post-action-btn like-btn {{ 'active' if post_data.user_has_liked else '' }}" 
+                            data-post-id="{{ post.id }}">
+                        <i class="bi {{ 'bi-heart-fill' if post_data.user_has_liked else 'bi-heart' }}"></i>
+                    </button>
+                    <button class="post-action-btn comment-btn" data-bs-toggle="modal" data-bs-target="#commentModal{{ post.id }}">
+                        <i class="bi bi-chat"></i>
+                    </button>
+                    <button class="post-action-btn share-btn" data-bs-toggle="modal" data-bs-target="#shareModal{{ post.id }}">
+                        <i class="bi bi-send"></i>
+                    </button>
+                    <button class="post-action-btn ms-auto bookmark-btn">
+                        <i class="bi bi-bookmark"></i>
+                    </button>
+                </div>
+                
+                <!-- Post likes -->
+                <div class="post-likes">
+                    <span class="like-count">{{ post.likes|length }}</span> likes
+                </div>
+                
+                <!-- Post caption -->
+                <div class="post-caption">
+                    <span class="post-caption-username">{{ author.username }}</span>
+                    {{ post.content }}
+                </div>
+                
+                <!-- View all comments -->
+                {% if post.comments|length > 2 %}
+                <div class="post-comments">
+                    <a href="{{ url_for('post_detail', post_id=post.id) }}">View all {{ post.comments|length }} comments</a>
+                </div>
+                {% endif %}
+                
+                <!-- Recent comments -->
+                {% for comment in post.comments[-2:] %}
+                <div class="post-caption">
+                    <span class="post-caption-username">{{ comment.author.username }}</span>
+                    {{ comment.content }}
+                </div>
+                {% endfor %}
+                
+                <!-- Add comment -->
+                <div class="post-add-comment">
+                    <input type="text" placeholder="Add a comment..." class="comment-input" data-post-id="{{ post.id }}">
+                    <button class="comment-submit" data-post-id="{{ post.id }}" disabled>Post</button>
+                </div>
+            </div>
+            
+            <!-- Comment Modal -->
+            <div class="modal fade" id="commentModal{{ post.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Comments</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        {% if author.id == current_user.id %}
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">Edit Post</a></li>
-                                <li><a class="dropdown-item text-danger" href="#">Delete Post</a></li>
-                            </ul>
+                        <div class="modal-body">
+                            {% for comment in post.comments %}
+                            <div class="d-flex mb-3">
+                                <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_picture) }}" 
+                                     class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                                <div>
+                                    <div>
+                                        <span class="fw-bold me-2">{{ comment.author.username }}</span>
+                                        {{ comment.content }}
+                                    </div>
+                                    <small class="text-muted">{{ comment.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-center text-muted">No comments yet</p>
+                            {% endfor %}
                         </div>
-                        {% endif %}
+                        <div class="modal-footer">
+                            <div class="w-100 d-flex">
+                                <input type="text" class="form-control me-2" placeholder="Add a comment..." 
+                                       id="modalCommentInput{{ post.id }}">
+                                <button class="btn btn-primary" onclick="addComment({{ post.id }})">Post</button>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <p class="card-text">{{ post.content }}</p>
-                    
-                    {% if post.image %}
-                    <div class="post-image-container mb-3">
-                        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded" alt="Post image">
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button class="btn btn-sm {{ 'btn-primary' if post_data.user_has_liked else 'btn-outline-primary' }} like-btn" data-post-id="{{ post.id }}">
-                            <i class="bi {{ 'bi-heart-fill' if post_data.user_has_liked else 'bi-heart' }}"></i>
-                            <span class="like-count ms-1">{{ post.likes|length }}</span>
-                        </button>
-                        
-                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-chat"></i> {{ post.comments|length }} Comments
-                        </a>
-                        
-                        <button class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-share"></i> Share
-                        </button>
+                </div>
+            </div>
+            
+            <!-- Share Modal -->
+            <div class="modal fade" id="shareModal{{ post.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Share Post</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="share-options">
+                                <div class="share-option" onclick="copyPostLink({{ post.id }})">
+                                    <i class="bi bi-link-45deg text-primary"></i>
+                                    <span>Copy Link</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-envelope text-primary"></i>
+                                    <span>Email</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-whatsapp text-success"></i>
+                                    <span>WhatsApp</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-facebook text-primary"></i>
+                                    <span>Facebook</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-twitter text-info"></i>
+                                    <span>Twitter</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-linkedin text-primary"></i>
+                                    <span>LinkedIn</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-messenger text-primary"></i>
+                                    <span>Messenger</span>
+                                </div>
+                                <div class="share-option">
+                                    <i class="bi bi-reddit text-warning"></i>
+                                    <span>Reddit</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -66,13 +166,23 @@
                 <div class="empty-state">
                     <i class="bi bi-journal-text display-4 text-muted mb-3"></i>
                     <h4 class="text-muted">No posts yet</h4>
-                    <p class="text-muted">Be the first to share something with the community!</p>
-                    <a href="{{ url_for('create_post') }}" class="btn btn-primary mt-2">
-                        <i class="bi bi-plus-circle"></i> Create Your First Post
+                    <p class="text-muted">Follow other entrepreneurs to see their posts here</p>
+                    <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
+                        <i class="bi bi-search"></i> Discover Entrepreneurs
                     </a>
                 </div>
             </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="toast-container">
+    <div id="shareToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-body">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <span id="toastMessage">Link copied to clipboard!</span>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -82,10 +192,10 @@
     // Like functionality
     document.addEventListener('DOMContentLoaded', function() {
         // Handle like button clicks
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.like-btn')) {
-                const button = e.target.closest('.like-btn');
-                const postId = button.dataset.postId;
+        document.querySelectorAll('.like-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.postId;
+                const icon = this.querySelector('i');
                 
                 fetch(`/like/${postId}`, { 
                     method: 'POST',
@@ -95,28 +205,96 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    const icon = button.querySelector('i');
-                    const countSpan = button.querySelector('.like-count');
+                    const likeCount = document.querySelector(`.post-likes .like-count[data-post-id="${postId}"]`) || 
+                                     document.querySelector(`.post-likes .like-count`);
                     
                     if (data.liked) {
                         icon.classList.remove('bi-heart');
                         icon.classList.add('bi-heart-fill');
-                        button.classList.remove('btn-outline-primary');
-                        button.classList.add('btn-primary');
+                        this.classList.add('active');
+                        icon.classList.add('like-animation');
+                        setTimeout(() => icon.classList.remove('like-animation'), 500);
                     } else {
                         icon.classList.remove('bi-heart-fill');
                         icon.classList.add('bi-heart');
-                        button.classList.remove('btn-primary');
-                        button.classList.add('btn-outline-primary');
+                        this.classList.remove('active');
                     }
                     
-                    countSpan.textContent = data.likes_count;
+                    if (likeCount) {
+                        likeCount.textContent = data.likes_count;
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
-            }
+            });
+        });
+        
+        // Handle comment input
+        document.querySelectorAll('.comment-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const postId = this.dataset.postId;
+                const submitButton = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
+                submitButton.disabled = this.value.trim() === '';
+                submitButton.classList.toggle('active', this.value.trim() !== '');
+            });
+            
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && this.value.trim() !== '') {
+                    const postId = this.dataset.postId;
+                    addComment(postId, this);
+                }
+            });
+        });
+        
+        // Handle comment submit buttons
+        document.querySelectorAll('.comment-submit').forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.postId;
+                const input = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+                addComment(postId, input);
+            });
         });
     });
+    
+    function addComment(postId, inputElement) {
+        const content = inputElement.value.trim();
+        if (!content) return;
+        
+        const formData = new FormData();
+        formData.append('content', content);
+        
+        fetch(`/comment/${postId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                inputElement.value = '';
+                const submitButton = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
+                submitButton.disabled = true;
+                submitButton.classList.remove('active');
+                
+                // Reload the page to show the new comment
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    
+    function copyPostLink(postId) {
+        const postUrl = `${window.location.origin}/post/${postId}`;
+        navigator.clipboard.writeText(postUrl).then(() => {
+            // Show toast notification
+            const toast = new bootstrap.Toast(document.getElementById('shareToast'));
+            document.getElementById('toastMessage').textContent = 'Post link copied to clipboard!';
+            toast.show();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
 </script>
 {% endblock %}
