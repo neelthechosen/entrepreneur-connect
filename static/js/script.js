@@ -1,341 +1,196 @@
-// Theme Toggle
+// Theme functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
     
-    // Set initial icon
-    updateThemeIcon(currentTheme);
-    
+    // Theme toggle button
+    const themeToggle = document.querySelector('.theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', function() {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             
-            document.documentElement.setAttribute('data-bs-theme', newTheme);
-            document.body.classList.add('theme-transition');
-            
-            // Save preference
-            document.cookie = `theme=${newTheme}; path=/; max-age=31536000`; // 1 year
-            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
             updateThemeIcon(newTheme);
-            
-            // Remove transition class after animation
-            setTimeout(() => {
-                document.body.classList.remove('theme-transition');
-            }, 300);
         });
     }
     
     function updateThemeIcon(theme) {
-        if (themeIcon) {
-            themeIcon.className = theme === 'light' ? 'bi-moon-fill' : 'bi-sun-fill';
-        }
-    }
-
-    // Initialize like buttons and event listeners
-    initializeLikeButtons();
-});
-
-// Initialize like buttons with event listeners
-function initializeLikeButtons() {
-    // Add event listeners to all like buttons
-    document.querySelectorAll('[id^="like-btn-"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const postId = this.id.replace('like-btn-', '');
-            likePost(postId);
-        });
-    });
-}
-
-// Like functionality
-function likePost(postId) {
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    const likeIcon = likeBtn.querySelector('i');
-    const likeCount = document.getElementById(`like-count-${postId}`);
-    
-    // Show loading state
-    likeBtn.disabled = true;
-    const originalHTML = likeBtn.innerHTML;
-    likeBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm"></i>';
-    
-    fetch(`/like/${postId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Update like count
-        if (likeCount) {
-            likeCount.textContent = data.likes_count;
-        }
+        const lightIcon = document.querySelector('[data-theme-icon="light"]');
+        const darkIcon = document.querySelector('[data-theme-icon="dark"]');
         
-        // Update like button appearance
-        if (data.liked) {
-            likeIcon.className = 'bi bi-heart-fill';
-            likeBtn.classList.add('liked');
+        if (theme === 'light') {
+            lightIcon.classList.remove('d-none');
+            darkIcon.classList.add('d-none');
         } else {
-            likeIcon.className = 'bi bi-heart';
-            likeBtn.classList.remove('liked');
+            lightIcon.classList.add('d-none');
+            darkIcon.classList.remove('d-none');
         }
-        
-        // Show feedback animation
-        likeBtn.classList.add('pulse');
-        setTimeout(() => {
-            likeBtn.classList.remove('pulse');
-        }, 600);
-        
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error liking post', 'error');
-        // Revert to original state
-        likeBtn.innerHTML = originalHTML;
-    })
-    .finally(() => {
-        likeBtn.disabled = false;
-    });
-}
-
-// Comment functionality
-function addComment(postId) {
-    const contentInput = document.getElementById(`comment-content-${postId}`);
-    const content = contentInput.value.trim();
-    
-    if (!content) {
-        showToast('Please enter a comment', 'error');
-        return;
     }
     
-    const commentBtn = document.querySelector(`[onclick="addComment(${postId})"]`);
-    const originalHTML = commentBtn.innerHTML;
-    commentBtn.disabled = true;
-    commentBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm"></i>';
-    
-    fetch(`/comment/${postId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin',
-        body: `content=${encodeURIComponent(content)}`
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+    // Share functionality
+    function sharePost(postId, platform) {
+        const postUrl = `${window.location.origin}/post/${postId}`;
+        let shareUrl;
+        
+        switch(platform) {
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}`;
+                break;
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+                break;
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://wa.me/?text=${encodeURIComponent(`Check out this post: ${postUrl}`)}`;
+                break;
+            case 'email':
+                shareUrl = `mailto:?subject=Check out this post&body=Check out this post: ${postUrl}`;
+                break;
+            default:
+                // Copy to clipboard as fallback
+                navigator.clipboard.writeText(postUrl).then(() => {
+                    showToast('Link copied to clipboard!');
+                });
+                return;
         }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            const commentsContainer = document.getElementById(`comments-${postId}`);
-            const newComment = createCommentElement(data.comment);
-            
-            // Add the new comment at the top
-            if (commentsContainer) {
-                commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
-            }
-            
-            // Clear input
-            contentInput.value = '';
-            
-            // Update comment count if it exists
-            const commentCount = document.querySelector(`[href="${window.location.pathname}#comments"]`);
-            if (commentCount) {
-                const currentCount = parseInt(commentCount.textContent.match(/\d+/)[0]) || 0;
-                commentCount.textContent = commentCount.textContent.replace(/\d+/, currentCount + 1);
-            }
-            
-            showToast('Comment added successfully!', 'success');
+        
+        window.open(shareUrl, '_blank');
+    }
+
+    function showToast(message) {
+        // Create toast if it doesn't exist
+        if (!document.getElementById('shareToast')) {
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.innerHTML = `
+                <div id="shareToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        <span id="toastMessage">${message}</span>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toastContainer);
         } else {
-            showToast('Error adding comment', 'error');
+            document.getElementById('toastMessage').textContent = message;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error adding comment', 'error');
-    })
-    .finally(() => {
-        commentBtn.disabled = false;
-        commentBtn.innerHTML = originalHTML;
-    });
-}
-
-function createCommentElement(comment) {
-    const commentDiv = document.createElement('div');
-    commentDiv.className = 'd-flex mb-3 comment-item';
-    commentDiv.innerHTML = `
-        <img src="${comment.profile_picture !== 'default_profile.png' ? 
-            '/static/uploads/' + comment.profile_picture : 
-            '/static/images/default_profile.png'}" 
-            alt="${comment.username}" class="rounded-circle me-2 comment-img" 
-            onerror="this.src='/static/images/default_profile.png'">
-        <div class="flex-grow-1">
-            <div class="bg-light rounded p-3">
-                <strong>${comment.username}</strong>
-                <p class="mb-0">${comment.content}</p>
-                <small class="text-muted">${comment.created_at}</small>
-            </div>
-        </div>
-    `;
-    return commentDiv;
-}
-
-// Enhanced Toast notifications
-function showToast(message, type = 'info') {
-    // Create toast container if it doesn't exist
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '1050';
-        document.body.appendChild(toastContainer);
+        
+        // Show toast
+        const toast = new bootstrap.Toast(document.getElementById('shareToast'));
+        toast.show();
     }
-    
-    const toastId = 'toast-' + Date.now();
-    const toast = document.createElement('div');
-    toast.id = toastId;
-    toast.className = `toast align-items-center text-bg-${type === 'error' ? 'danger' : type} border-0`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    const iconClass = {
-        'success': 'bi-check-circle',
-        'error': 'bi-exclamation-circle',
-        'info': 'bi-info-circle'
-    }[type] || 'bi-info-circle';
-    
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body d-flex align-items-center">
-                <i class="bi ${iconClass} me-2"></i>
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    `;
-    
-    toastContainer.appendChild(toast);
-    
-    const bsToast = new bootstrap.Toast(toast, {
-        autohide: true,
-        delay: 3000
-    });
-    bsToast.show();
-    
-    // Remove toast after it's hidden
-    toast.addEventListener('hidden.bs.toast', function() {
-        toast.remove();
-    });
-}
 
-// Image preview for file inputs
-function previewImage(input, previewId) {
-    const preview = document.getElementById(previewId);
-    const file = input.files[0];
-    
-    if (file) {
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        if (!validTypes.includes(file.type)) {
-            showToast('Please select a valid image file (JPEG, PNG, GIF)', 'error');
-            input.value = '';
-            return;
-        }
-        
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('Image size must be less than 5MB', 'error');
-            input.value = '';
-            return;
-        }
-        
-        const reader = new FileReader();
-        
-        reader.addEventListener('load', function() {
-            preview.src = reader.result;
-            preview.style.display = 'block';
-        });
-        
-        reader.readAsDataURL(file);
-    }
-}
-
-// Enhanced form handling
-document.addEventListener('DOMContentLoaded', function() {
-    // Add loading states to forms
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm"></i> Processing...';
-            }
-        });
-    });
-    
-    // Auto-focus comment inputs when comment button is clicked
-    document.querySelectorAll('[href*="#comment"]').forEach(link => {
-        link.addEventListener('click', function(e) {
-            const postId = this.getAttribute('href').split('-')[1];
-            const commentInput = document.getElementById(`comment-content-${postId}`);
-            if (commentInput) {
-                setTimeout(() => commentInput.focus(), 100);
-            }
-        });
-    });
-    
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Handle like buttons
+    document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const icon = this.querySelector('i');
+            
+            fetch(`/like/${postId}`, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const likeCount = document.querySelector(`.like-count[data-post-id="${postId}"]`);
+                
+                if (data.liked) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                    this.classList.add('active');
+                    icon.classList.add('like-animation');
+                    setTimeout(() => icon.classList.remove('like-animation'), 500);
+                } else {
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                    this.classList.remove('active');
+                }
+                
+                if (likeCount) {
+                    likeCount.textContent = data.likes_count;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+    
+    // Handle comment input
+    document.querySelectorAll('.comment-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const postId = this.dataset.postId;
+            const submitBtn = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
+            submitBtn.disabled = this.value.trim() === '';
+            submitBtn.classList.toggle('active', this.value.trim() !== '');
+        });
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim() !== '') {
+                const postId = this.dataset.postId;
+                addComment(postId, this);
+            }
+        });
+    });
+    
+    // Handle comment submit buttons
+    document.querySelectorAll('.comment-submit').forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const input = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+            addComment(postId, input);
+        });
+    });
+    
+    function addComment(postId, inputElement) {
+        const content = inputElement.value.trim();
+        if (!content) return;
+        
+        const formData = new FormData();
+        formData.append('content', content);
+        
+        fetch(`/comment/${postId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                inputElement.value = '';
+                const submitButton = document.querySelector(`.comment-submit[data-post-id="${postId}"]`);
+                submitButton.disabled = true;
+                submitButton.classList.remove('active');
+                
+                // Reload the page to show the new comment
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    
+    // Copy post link functionality
+    window.copyPostLink = function(postId) {
+        const postUrl = `${window.location.origin}/post/${postId}`;
+        navigator.clipboard.writeText(postUrl).then(() => {
+            showToast('Post link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    };
 });
-
-// Add CSS for new animations
-const style = document.createElement('style');
-style.textContent = `
-    .pulse {
-        animation: pulse 0.6s ease-in-out;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-    
-    .comment-item {
-        animation: slideIn 0.3s ease-out;
-    }
-    
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .spinner-border-sm {
-        width: 1rem;
-        height: 1rem;
-    }
-`;
-document.head.appendChild(style);
