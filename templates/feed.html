@@ -1,171 +1,110 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
+<div class="row">
+    <div class="col-lg-8 mx-auto">
         <!-- Create Post Card -->
-        <div class="card business-card mb-4">
-            <div class="card-body d-flex align-items-center">
-                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" 
-                     class="rounded-circle me-3" width="50" height="50" style="object-fit: cover;">
-                <a href="{{ url_for('create_post') }}" class="btn btn-light flex-grow-1 text-start text-muted">
-                    Share your business idea or update...
-                </a>
-            </div>
-        </div>
-        
-        {% if posts %}
-            {% for post_data in posts %}
-            {% set post = post_data.post %}
-            {% set author = post_data.author %}
-            <div class="card post-card">
-                <!-- Post header -->
-                <div class="post-header">
-                    <img src="{{ url_for('static', filename='uploads/' + author.profile_picture) }}" 
-                         class="post-user-img" alt="{{ author.name }}">
-                    <div class="d-flex flex-column">
-                        <a href="{{ url_for('profile', username=author.username) }}" class="post-username">
-                            {{ author.username }}
-                        </a>
-                        <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y') }}</small>
-                    </div>
-                    <span class="post-time">{{ post.created_at.strftime('%I:%M %p') }}</span>
-                </div>
-                
-                <!-- Post content -->
-                <div class="post-content">
-                    {{ post.content }}
-                </div>
-                
-                <!-- Post image -->
-                {% if post.image %}
-                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="post-image" alt="Post image">
-                {% endif %}
-                
-                <!-- Post stats -->
-                <div class="d-flex justify-content-between px-4 py-2">
-                    <div>
-                        <span class="like-count me-3" data-post-id="{{ post.id }}">{{ post.likes|length }}</span> likes
-                    </div>
-                    <div>
-                        <span>{{ post.comments|length }}</span> comments
-                    </div>
-                </div>
-                
-                <!-- Post actions -->
-                <div class="post-actions">
-                    <button class="post-action-btn like-btn {{ 'active' if post_data.user_has_liked else '' }}" 
-                            data-post-id="{{ post.id }}">
-                        <i class="bi {{ 'bi-heart-fill' if post_data.user_has_liked else 'bi-heart' }}"></i>
-                    </button>
-                    <button class="post-action-btn comment-btn" data-bs-toggle="modal" data-bs-target="#commentModal{{ post.id }}">
-                        <i class="bi bi-chat"></i>
-                    </button>
-                    <button class="post-action-btn share-btn" onclick="copyPostLink({{ post.id }})">
-                        <i class="bi bi-share"></i>
-                    </button>
-                    <button class="post-action-btn ms-auto bookmark-btn">
-                        <i class="bi bi-bookmark"></i>
-                    </button>
-                </div>
-                
-                <!-- Add comment -->
-                <div class="post-add-comment">
-                    <input type="text" placeholder="Add a comment..." class="comment-input" data-post-id="{{ post.id }}">
-                    <button class="comment-submit" data-post-id="{{ post.id }}" disabled>Post</button>
-                </div>
-            </div>
-            
-            <!-- Comment Modal -->
-            <div class="modal fade" id="commentModal{{ post.id }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Comments</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            {% for comment in post.comments %}
-                            <div class="d-flex mb-3">
-                                <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_picture) }}" 
-                                     class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
-                                <div>
-                                    <div>
-                                        <span class="fw-bold me-2">{{ comment.author.username }}</span>
-                                        {{ comment.content }}
-                                    </div>
-                                    <small class="text-muted">{{ comment.created_at.strftime('%b %d, %Y') }}</small>
-                                </div>
-                            </div>
-                            {% else %}
-                            <p class="text-center text-muted">No comments yet</p>
-                            {% endfor %}
-                        </div>
-                        <div class="modal-footer">
-                            <div class="w-100 d-flex">
-                                <input type="text" class="form-control me-2" placeholder="Add a comment..." 
-                                       id="modalCommentInput{{ post.id }}">
-                                <button class="btn btn-primary" onclick="addComment({{ post.id }}, document.getElementById('modalCommentInput{{ post.id }}'))">Post</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="text-center py-5">
-                <div class="empty-state">
-                    <i class="bi bi-people display-4 text-muted mb-3"></i>
-                    <h4 class="text-muted">Welcome to Entrepreneur Connect</h4>
-                    <p class="text-muted">Follow other entrepreneurs to see their posts here</p>
-                    <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
-                        <i class="bi bi-search"></i> Discover Entrepreneurs
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) if current_user.profile_picture != 'default_profile.png' else url_for('static', filename='images/default_profile.png') }}" 
+                         alt="{{ current_user.username }}" class="rounded-circle me-2" width="40" height="40">
+                    <a href="{{ url_for('create_post') }}" class="btn btn-light flex-grow-1 text-start text-muted">
+                        Share your entrepreneurial insights...
                     </a>
                 </div>
             </div>
+        </div>
+
+        <!-- Posts Feed -->
+        <div class="posts-container">
+            {% for post in posts.items %}
+            <div class="card post-card mb-4">
+                <div class="card-body">
+                    <!-- Post Header -->
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ url_for('static', filename='uploads/' + post.author.profile_picture) if post.author.profile_picture != 'default_profile.png' else url_for('static', filename='images/default_profile.png') }}" 
+                             alt="{{ post.author.username }}" class="rounded-circle me-2" width="40" height="40">
+                        <div>
+                            <h6 class="mb-0">
+                                <a href="{{ url_for('profile', username=post.author.username) }}" class="text-decoration-none">
+                                    {{ post.author.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">@{{ post.author.username }} • {{ post.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Post Content -->
+                    <p class="card-text">{{ post.content }}</p>
+                    
+                    {% if post.image %}
+                    <div class="mb-3">
+                        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
+                             alt="Post image" class="img-fluid rounded" style="max-height: 500px; width: auto;">
+                    </div>
+                    {% endif %}
+
+                    <!-- Post Actions -->
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-sm btn-outline-primary like-btn" id="like-btn-{{ post.id }}">
+                            <i class="bi {% if current_user.id in post.likes|map(attribute='user_id')|list %}bi-heart-fill liked{% else %}bi-heart{% endif %}"></i>
+                            <span id="like-count-{{ post.id }}">{{ post.likes|length }}</span>
+                        </button>
+                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-chat"></i> Comment ({{ post.comments|length }})
+                        </a>
+                        <button class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-share"></i> Share
+                        </button>
+                    </div>
+
+                    <!-- Comment Form -->
+                    <div class="mt-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Add a comment..." 
+                                   id="comment-content-{{ post.id }}">
+                            <button class="btn btn-primary" type="button" onclick="addComment({{ post.id }})">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h3 class="text-muted">No posts yet</h3>
+                <p class="text-muted">Be the first to share your entrepreneurial journey!</p>
+                <a href="{{ url_for('create_post') }}" class="btn btn-primary">Create First Post</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if posts.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if posts.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('feed', page=posts.prev_num) }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in posts.iter_pages() %}
+                <li class="page-item {% if page_num == posts.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('feed', page=page_num) }}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if posts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('feed', page=posts.next_num) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
     </div>
 </div>
-
-<!-- Toast for notifications -->
-<div class="toast-container">
-    <div id="shareToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-body">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span id="toastMessage">Link copied to clipboard!</span>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function addComment(postId, inputElement) {
-        const content = inputElement.value.trim();
-        if (!content) return;
-        
-        const formData = new FormData();
-        formData.append('content', content);
-        
-        fetch(`/comment/${postId}`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                inputElement.value = '';
-                // Close the modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById(`commentModal${postId}`));
-                modal.hide();
-                
-                // Reload the page to show the new comment
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
-</script>
 {% endblock %}
